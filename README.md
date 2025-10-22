@@ -39,36 +39,17 @@ chmod +x */*.sh
 sudo apt-get update && sudo apt-get install -y jq  # Ubuntu/Debian
 ```
 
-## 📁 Folder Structure & Usage
+## 📊 Scripts Overview
 
-### 1. 📁 IAM Management (`iam/`)
-For managing IAM users, groups, and permissions within a single AWS account.
-
-**Key Scripts:**
-- `setup-iam-groups.sh` - Creates 25+ standard groups for DevOps teams
-- `create-user.sh` - Creates users and assigns to groups
-- `create-group.sh` - Creates custom groups with AWS or custom policies
-
-**See detailed documentation:** [iam/README.md](iam/README.md)
-
-### 2. 📁 SSO Management (`sso/`)
-For enterprise-scale identity management across multiple AWS accounts.
-
-**Key Scripts:**
-- `create-sso-group.sh` - Creates SSO permission sets
-- `assign-sso-user.sh` - Assigns users/groups to accounts
-- `list-sso-permission-sets.sh` - Lists available permission sets
-
-**See detailed documentation:** [sso/README.md](sso/README.md)
-
-### 3. 📁 Role Management (`role/`)
-For managing IAM roles for services, cross-account access, and temporary credentials.
-
-**Key Scripts:**
-- `create-role.sh` - Creates various types of IAM roles
-- `assume-role.sh` - Assumes roles for temporary access
-
-**See detailed documentation:** [role/README.md](role/README.md)
+| Category | Script | Purpose |
+|----------|---------|---------|
+| **IAM** | `setup-iam-groups.sh` | Creates intial 25+ standard groups |
+| **IAM** | `create-user.sh` | Creates users and assigns to groups |
+| **IAM** | `create-group.sh` | Creates custom groups |
+| **SSO** | `create-sso-group.sh` | Creates SSO permission sets |
+| **SSO** | `assign-sso-user.sh` | Assigns users to accounts |
+| **Roles** | `create-role.sh` | Creates various IAM roles |
+| **Roles** | `assume-role.sh` | Assumes roles for temporary access |
 
 ## 🎯 Common Workflows
 
@@ -107,18 +88,6 @@ For managing IAM roles for services, cross-account access, and temporary credent
 - **MFA Enforcement**: Enable MFA for all users
 - **Credential Management**: Access keys stored securely in `~/.aws/keys/`
 - **Session Management**: Appropriate session durations for different roles
-
-## 📊 Scripts Overview
-
-| Category | Script | Purpose |
-|----------|---------|---------|
-| **IAM** | `setup-iam-groups.sh` | Creates intial 25+ standard groups |
-| **IAM** | `create-user.sh` | Creates users and assigns to groups |
-| **IAM** | `create-group.sh` | Creates custom groups |
-| **SSO** | `create-sso-group.sh` | Creates SSO permission sets |
-| **SSO** | `assign-sso-user.sh` | Assigns users to accounts |
-| **Roles** | `create-role.sh` | Creates various IAM roles |
-| **Roles** | `assume-role.sh` | Assumes roles for temporary access |
 
 ## 💡 Typical Use Cases
 
