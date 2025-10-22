@@ -1,4 +1,4 @@
-## 📋 Usage Examples
+## 📋 IAM Usage Examples
 
 ### 1. Setup All Standard Groups (One-time)
 ```bash
@@ -192,3 +192,327 @@ EOF
 - MFA strongly encouraged for all users
 
 *Note: Create additional groups using `create-group.sh` for any special requirements*
+
+## 📋 Usage Examples for SSO
+
+### 1. Create SSO Permission Sets
+
+**Using AWS Managed Policy:**
+```bash
+./create-sso-group.sh --profile management-account --permission-set Developers --policy ReadOnlyAccess --description "Developers read-only access" --session-duration PT12H
+
+./create-sso-group.sh --profile management-account --permission-set Admins --policy AdministratorAccess --description "Full admin access" --session-duration PT4H
+```
+
+**Using Custom Policy (Inline):**
+```bash
+./create-sso-group.sh --profile management-account --permission-set Logs-Viewers --custom-policy '{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "logs:Describe*",
+                "logs:Get*", 
+                "logs:List*",
+                "logs:FilterLogEvents"
+            ],
+            "Resource": "*"
+        }
+    ]
+}' --description "CloudWatch Logs access" --session-duration PT8H
+```
+
+**Using Custom Policy (File):**
+```bash
+# Create policy file
+cat > ecr-policy.json << 'EOF'
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "ECRAccess",
+            "Effect": "Allow",
+            "Action": [
+                "ecr:GetAuthorizationToken",
+                "ecr:BatchCheckLayerAvailability",
+                "ecr:GetDownloadUrlForLayer",
+                "ecr:GetRepositoryPolicy",
+                "ecr:DescribeRepositories",
+                "ecr:ListImages",
+                "ecr:DescribeImages",
+                "ecr:BatchGetImage",
+                "ecr:InitiateLayerUpload",
+                "ecr:UploadLayerPart",
+                "ecr:CompleteLayerUpload",
+                "ecr:PutImage"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+EOF
+
+./create-sso-group.sh --profile management-account --permission-set Container-Devs --custom-policy-file ecr-policy.json --description "ECR access for container developers" --session-duration PT8H
+```
+
+### 2. Assign Users/Groups to Accounts
+
+**Using Permission Set Name:**
+```bash
+# Assign user to development account
+./assign-sso-user.sh --profile management-account --permission-set Developers --principal-type USER --principal-id a1b2c3d4-5678-90ab-cdef-123456789012 --account-id 123456789012
+
+# Assign group to production account
+./assign-sso-user.sh --profile management-account --permission-set Admins --principal-type GROUP --principal-id g1h2i3j4-5678-90ab-cdef-123456789012 --account-id 111222333444
+```
+
+**Using Permission Set ARN:**
+```bash
+./assign-sso-user.sh --profile management-account --permission-set-arn arn:aws:sso:::permissionSet/ssoins-123456/ps-789012 --principal-type USER --principal-id u1v2w3x4-5678-90ab-cdef-123456789012 --account-id 123456789012
+```
+
+### 3. Bulk Assignment Example
+
+```bash
+# Assign same user to multiple accounts
+./assign-sso-user.sh --profile management-account --permission-set Developers --principal-type USER --principal-id u1v2w3x4-5678-90ab-cdef-123456789012 --account-id 111222333444
+./assign-sso-user.sh --profile management-account --permission-set Developers --principal-type USER --principal-id u1v2w3x4-5678-90ab-cdef-123456789012 --account-id 555666777888
+./assign-sso-user.sh --profile management-account --permission-set Developers --principal-type USER --principal-id u1v2w3x4-5678-90ab-cdef-123456789012 --account-id 999000111222
+```
+
+## 🔧 Helper Scripts
+
+### List SSO Permission Sets (`list-sso-permission-sets.sh`)
+
+
+Here are comprehensive IAM Roles scripts covering all real-world use cases:
+
+## 🛠️ IAM Roles
+
+## 📋 Real-World Use Cases & Examples
+
+### 1. EC2 Instance Roles
+
+**Web Server with S3 Access:**
+```bash
+./create-role.sh --profile 81 --role-name WebServer-Role --type ec2 --policy AmazonS3ReadOnlyAccess --description "Web server role for S3 static content"
+
+# Launch EC2 with the role
+aws ec2 run-instances --image-id ami-0c02fb55956c7d316 --instance-type t3.micro --iam-instance-profile Name=WebServer-Role --profile 81
+```
+
+**Application Server with Multiple Services:**
+```bash
+# Create custom policy file
+cat > app-server-policy.json << 'EOF'
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "s3:GetObject",
+                "s3:PutObject",
+                "s3:ListBucket",
+                "dynamodb:GetItem",
+                "dynamodb:PutItem",
+                "dynamodb:Query",
+                "sqs:SendMessage",
+                "sqs:ReceiveMessage"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+EOF
+
+./create-role.sh --profile 81 --role-name AppServer-Role --type ec2 --custom-policy-file app-server-policy.json --description "Application server role"
+```
+
+### 2. Lambda Function Roles
+
+**Basic Lambda with CloudWatch Logs:**
+```bash
+./create-role.sh --profile 81 --role-name MyLambda-Role --type lambda --policy AWSLambdaBasicExecutionRole --description "Lambda function role"
+```
+
+**Lambda with S3 and DynamoDB Access:**
+```bash
+./create-role.sh --profile 81 --role-name DataProcessor-Role --type lambda --custom-policy '{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "logs:*",
+                "s3:GetObject",
+                "s3:PutObject",
+                "dynamodb:GetItem",
+                "dynamodb:PutItem",
+                "dynamodb:UpdateItem"
+            ],
+            "Resource": "*"
+        }
+    ]
+}' --description "Data processing Lambda role"
+```
+
+### 3. Cross-Account Roles
+
+**Development Account Access:**
+```bash
+./create-role.sh --profile production-account --role-name CrossAccount-Dev --type cross-account --trust-account 123456789012 --policy ReadOnlyAccess --description "Cross-account access for developers"
+```
+
+**Production Access with External ID:**
+```bash
+./create-role.sh --profile production-account --role-name CrossAccount-CI-CD --type cross-account --trust-account 111222333444 --external-id cicd-2024 --policy AdministratorAccess --description "CI/CD deployment access"
+```
+
+**Custom Cross-Account Policy:**
+```bash
+cat > cross-account-policy.json << 'EOF'
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "ec2:Describe*",
+                "s3:ListBucket",
+                "s3:GetObject",
+                "cloudwatch:GetMetricStatistics",
+                "logs:FilterLogEvents"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+EOF
+
+./create-role.sh --profile 81 --role-name Monitoring-Role --type cross-account --trust-account 333444555666 --custom-policy-file cross-account-policy.json --description "Cross-account monitoring role"
+```
+
+### 4. Service-Linked Roles
+
+**ECS Service Role:**
+```bash
+./create-role.sh --profile 81 --role-name MyECS-Role --type service-linked --service-name ecs.amazonaws.com --description "ECS service-linked role"
+```
+
+**ELB Service Role:**
+```bash
+./create-role.sh --profile 81 --role-name MyELB-Role --type service-linked --service-name elasticloadbalancing.amazonaws.com --description "ELB service-linked role"
+```
+
+**Custom Suffix Service Role:**
+```bash
+./create-role.sh --profile 81 --role-name MyApp-RDS-Role --type service-linked --service-name rds.amazonaws.com --custom-suffix MyApplication --description "RDS service role for MyApplication"
+```
+
+### 5. Custom Trust Roles
+
+**Role for Specific AWS Service:**
+```bash
+./create-role.sh --profile 81 --role-name APIGateway-Role --type custom --trust-policy '{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "Service": "apigateway.amazonaws.com"
+            },
+            "Action": "sts:AssumeRole"
+        }
+    ]
+}' --policy AmazonS3FullAccess --description "API Gateway role for S3 integration"
+```
+
+**Role with Multiple Trusted Entities:**
+```bash
+cat > multi-trust-policy.json << 'EOF'
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "Service": "lambda.amazonaws.com"
+            },
+            "Action": "sts:AssumeRole"
+        },
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "arn:aws:iam::123456789012:root"
+            },
+            "Action": "sts:AssumeRole"
+        }
+    ]
+}
+EOF
+
+./create-role.sh --profile 81 --role-name MultiTrust-Role --type custom --trust-policy-file multi-trust-policy.json --policy ReadOnlyAccess --description "Role trusted by Lambda and cross-account"
+```
+
+## 🔄 Using Assume Role
+
+**Basic Role Assumption:**
+```bash
+./assume-role.sh --profile 81 --role-arn arn:aws:iam::123456789012:role/CrossAccount-Dev --export
+
+# Test the assumed role
+export AWS_ACCESS_KEY_ID="..." AWS_SECRET_ACCESS_KEY="..." AWS_SESSION_TOKEN="..."
+aws sts get-caller-identity
+aws s3 ls
+```
+
+**With External ID:**
+```bash
+./assume-role.sh --profile 81 --role-arn arn:aws:iam::123456789012:role/CrossAccount-Prod --external-id prod2024 --duration 7200 --export
+```
+
+**JSON Output:**
+```bash
+./assume-role.sh --profile 81 --role-arn arn:aws:iam::123456789012:role/ReadOnly-Role --output json
+```
+
+**Credentials File Output:**
+```bash
+./assume-role.sh --profile 81 --role-arn arn:aws:iam::123456789012:role/Dev-Role --output credentials >> ~/.aws/credentials
+```
+
+## 🎯 Real-World Scenarios
+
+### Scenario 1: CI/CD Pipeline
+```bash
+# Create cross-account role for deployment
+./create-role.sh --profile production-account --role-name CI-CD-Deploy --type cross-account --trust-account 111222333444 --external-id cicd-pipeline --policy AdministratorAccess --description "CI/CD deployment role"
+
+# In CI/CD pipeline, assume the role
+./assume-role.sh --profile ci-account --role-arn arn:aws:iam::123456789012:role/CI-CD-Deploy --external-id cicd-pipeline --export
+```
+
+### Scenario 2: Multi-Service Application
+```bash
+# Create EC2 role for web tier
+./create-role.sh --profile 81 --role-name WebTier-Role --type ec2 --custom-policy-file web-tier-policy.json
+
+# Create Lambda role for processing
+./create-role.sh --profile 81 --role-name Processor-Role --type lambda --custom-policy-file processor-policy.json
+
+# Create cross-account role for shared services
+./create-role.sh --profile 81 --role-name SharedServices-Role --type cross-account --trust-account 999888777666 --policy AmazonS3ReadOnlyAccess
+```
+
+### Scenario 3: Security Auditing
+```bash
+# Create cross-account read-only role for auditors
+./create-role.sh --profile app-account --role-name Security-Audit --type cross-account --trust-account 333444555666 --policy SecurityAudit --description "Security audit role"
+
+# Auditors assume the role
+./assume-role.sh --profile audit-account --role-arn arn:aws:iam::123456789012:role/Security-Audit --role-session-name SecurityAudit --duration 10800 --export
+```
+
+These scripts cover every possible IAM role scenario with real-world examples and support for both inline policies and policy files!
